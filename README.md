@@ -1,6 +1,6 @@
 # Still
 
-A local reading library with a focused RSVP reader. Import a `.txt` file or paste text, then read at your own pace. Everything stays in IndexedDB in your browser.
+A local reading library with an RSVP reader that shows a few words at a time. Import a `.txt` file or paste text, then choose your reading speed. App stores your library in IndexedDB in your browser.
 
 ## Development
 
@@ -15,25 +15,27 @@ Run `pnpm check` for formatting, linting, type checking, unused-code detection, 
 
 ## Reading
 
-Space toggles playback. Left/right move 15 words; up/down adjust speed by 25 WPM. Controls keep their native keyboard behavior when focused. Pausing reveals the current paragraph; select a word to resume from there. Text view provides the complete scrollable document.
+Space toggles playback. The left and right arrow keys move back or forward 15 words. The up and down arrow keys adjust speed by 25 words per minute. Focused controls keep their native keyboard behavior.
 
-Frames contain up to the selected word count, constrained to 22 characters unless a single word is longer. Sentence and paragraph boundaries end a frame. Punctuation, numbers, long words, and the first ten words after play receive extra time, so WPM is a base pace and remaining time is an estimate.
+Pause to see the current paragraph, then select a word to resume from there. Open text view to scroll through the full document.
+
+Each frame shows up to your selected word count, with a 22-character limit unless a single word is longer. Frames end at sentence and paragraph boundaries. The reader gives extra time to punctuation, numbers, long words, and the first ten words after you start playback. Your chosen speed is the base pace, so the remaining time is an estimate.
 
 ## Hosting
 
-`render.yaml` configures a Render static site, including the `/books/*` fallback needed for local book URLs. Connect the repository through a Render Blueprint. No database, secrets, or server service is needed. The generated site is in `build/`.
+Connect the repository through a Render Blueprint. `render.yaml` configures a static site with the `/books/*` fallback for local book URLs. The build writes the site to `build/`. Hosting needs no database, secrets, or application server.
 
-## MVP boundaries
+## Limits and storage
 
-- UTF-8 plain text only, up to 5 MB. PDF, EPUB, link imports, accounts, sync, and extensions are deferred.
-- Data belongs to this browser profile and origin. Clearing site data deletes the library. Keep original files: there is no backup/export feature yet.
-- The app requests persistent browser storage after import, but the browser may decline. A stable domain matters.
-- There is no service worker, so loading the application requires a network connection.
-- Playback pauses on tab hiding and navigation, and never autoplays. Reading progress is saved after each frame.
-- The app is a pacing tool; it makes no promise of improved comprehension at higher speeds.
+- Import UTF-8 plain text files up to 5 MB. Still does not yet support PDF, EPUB, link imports, accounts, sync, or extensions.
+- Your library stays in the browser profile and origin where you imported it. Clearing site data deletes it. Keep your original files because there is no backup or export yet.
+- Still requests persistent browser storage after import, but the browser may decline. Keep the app on the same domain to retain access to your library.
+- Loading the app requires a network connection because there is no service worker.
+- Playback pauses when you hide the tab or navigate away. It never starts automatically. Still saves your progress after each frame.
+- Still helps you pace your reading. Higher speeds do not guarantee better comprehension.
 
 ## Tooling decisions
 
-TypeScript 6 is retained because the current `svelte-check` peer range does not support TypeScript 7. Oxfmt handles all formatting with its built-in Svelte support enabled. Oxlint covers JS/TS with type-aware rules; ESLint is scoped to the Svelte plugin's component checks. The Knip exception covers dynamically loaded icon data.
+The project uses TypeScript 6 because the current `svelte-check` peer range does not support TypeScript 7. Oxfmt formats all files with its built-in Svelte support enabled. Oxlint checks JavaScript and TypeScript with type-aware rules. ESLint runs only the Svelte plugin's component checks. The Knip exception covers dynamically loaded icon data.
 
-Dependency install scripts are denied; the platform binaries used here work without them. Dependencies use exact pins. CI is the authoritative gate; the optional hook only checks formatting of staged files. No commit-message convention or scheduled dependency automation is imposed.
+Dependencies use exact versions, and install scripts are disabled. The platform binaries work without those scripts. CI runs the required checks. The optional pre-commit hook checks only staged-file formatting. There is no required commit-message format or scheduled dependency automation.
