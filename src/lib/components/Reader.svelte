@@ -1,7 +1,10 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- Query URLs preserve page.url.pathname, which already includes the deployment base. */
 	import { resolve } from '$app/paths';
-	import { onMount, untrack } from 'svelte';
-	import { beforeNavigate } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { page } from '$app/state';
+	import { integerParam, queryUrl } from '$lib/url';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import ArrowLeft from '~icons/lucide/arrow-left';
 	import Play from '~icons/lucide/play';
 	import Pause from '~icons/lucide/pause';
@@ -24,11 +27,12 @@
 	let { book, text }: { book: Book; text: string } = $props();
 	const words = $derived(tokenize(text));
 	const paragraphs = $derived(text.split(/\n\s*\n/u));
-	let position = $state(untrack(() => book.position));
-	let wpm = $state(350);
-	let chunk = $state(1);
+	let settings = $state({ wpm: 350, chunk: 1 });
+	const position = $derived(integerParam(page.url, 'position', book.position, 0, words.length));
+	const wpm = $derived(integerParam(page.url, 'wpm', settings.wpm, 100, 900));
+	const chunk = $derived(integerParam(page.url, 'chunk', settings.chunk, 1, 3));
 	let playing = $state(false);
-	let mode = $state<'focus' | 'text'>('focus');
+	const mode = $derived(page.url.searchParams.get('view') === 'text' ? 'text' : 'focus');
 	let error = $state('');
 	let ready = $state(false);
 	let ramp = $state(0);
@@ -68,26 +72,38 @@
 		playing = false;
 		persist();
 	};
+	const seek = (next: number) => {
+		const value = Math.max(0, Math.min(words.length, next));
+		void goto(queryUrl(page.url, { position: String(value) }), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true,
+		});
+		void savePosition(book.id, value).catch(fail);
+	};
 	const move = (next: number) => {
 		playing = false;
-		position = Math.max(0, Math.min(words.length, next));
-		persist();
+		seek(next);
 	};
 	const toggle = () => {
 		if (!ready || mode === 'text' || error) return;
 		if (playing) pause();
 		else {
-			if (finished) position = 0;
+			if (finished) seek(0);
 			ramp = 0;
 			playing = true;
 		}
 	};
-	const preferences = () => {
-		void savePreferences(wpm, chunk).catch(fail);
+	const preferences = (nextWpm: number, nextChunk: number) => {
+		void goto(queryUrl(page.url, { wpm: String(nextWpm), chunk: String(nextChunk) }), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true,
+		});
+		void savePreferences(nextWpm, nextChunk).catch(fail);
 	};
 	const speed = (next: number) => {
-		wpm = Math.min(900, Math.max(100, next));
-		preferences();
+		preferences(Math.min(900, Math.max(100, Math.round(next))), chunk);
 	};
 	const keyboard = (event: KeyboardEvent) => {
 		if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
@@ -120,10 +136,9 @@
 	onMount(() => {
 		let mounted = true;
 		void loadPreferences()
-			.then((settings) => {
+			.then((saved) => {
 				if (!mounted) return;
-				wpm = settings.wpm;
-				chunk = settings.chunk;
+				settings = saved;
 				ready = true;
 			})
 			.catch(fail);
@@ -131,7 +146,14 @@
 			mounted = false;
 		};
 	});
-	beforeNavigate(pause);
+	beforeNavigate(({ to, type }) => {
+		if (
+			type === 'popstate' ||
+			to?.url.pathname !== page.url.pathname ||
+			to.url.searchParams.get('view') !== page.url.searchParams.get('view')
+		)
+			pause();
+	});
 
 	$effect(() => {
 		if (playing || mode !== 'focus') return;
@@ -151,10 +173,10 @@
 		const count = frame.count;
 		const timer = setTimeout(
 			() => {
-				position = Math.min(words.length, position + count);
+				const next = position + count;
+				seek(next);
 				ramp += count;
-				persist();
-				if (position >= words.length) playing = false;
+				if (next >= words.length) playing = false;
 			},
 			dwellTime(words.slice(position, position + count), wpm, ramp),
 		);
@@ -172,18 +194,16 @@
 
 <div class="reader-shell">
 	<header class="reader-header">
-		<a class="btn btn-ghost back-link" href={resolve('/')}
+		<a class="btn btn-ghost back-link" href={resolve('/books')}
 			><ArrowLeft aria-hidden="true" /> Library</a
-		><Brand /><button
+		><Brand /><a
 			class="btn btn-ghost view-toggle"
-			aria-pressed={mode === 'text'}
-			onclick={() => {
-				pause();
-				mode = mode === 'focus' ? 'text' : 'focus';
-			}}
+			href={queryUrl(page.url, { view: mode === 'focus' ? 'text' : null })}
+			data-sveltekit-noscroll
+			data-sveltekit-keepfocus
 			>{#if mode === 'focus'}<AlignLeft aria-hidden="true" /> Text view{:else}<Focus
 					aria-hidden="true"
-				/> Focus view{/if}</button
+				/> Focus view{/if}</a
 		>
 	</header>
 	<main id="main" class="reader-main">
@@ -269,9 +289,9 @@
 						><span>Words</span><select
 							class="select select-ghost"
 							aria-label="Words per frame"
-							bind:value={chunk}
+							value={chunk}
 							disabled={!ready}
-							onchange={preferences}
+							onchange={(event) => preferences(wpm, Number(event.currentTarget.value))}
 							><option value={1}>1</option><option value={2}>2</option><option value={3}>3</option
 							></select
 						></label

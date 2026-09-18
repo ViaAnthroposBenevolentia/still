@@ -1,4 +1,9 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-navigation-without-resolve -- Query URLs preserve page.url.pathname, which already includes the deployment base. */
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { queryUrl } from '$lib/url';
+	import Modal from '$lib/components/Modal.svelte';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { liveQuery } from 'dexie';
@@ -16,11 +21,21 @@
 	let books = $state<Book[]>([]);
 	let loading = $state(true);
 	let error = $state('');
-	let query = $state('');
-	let filter = $state('all');
-	let importDialog = $state<HTMLDialogElement>();
-	let deleteDialog = $state<HTMLDialogElement>();
-	let removing = $state<Book>();
+	const query = $derived(page.url.searchParams.get('q') ?? '');
+	const filter = $derived(
+		['reading', 'finished'].includes(page.url.searchParams.get('filter') ?? '')
+			? page.url.searchParams.get('filter')
+			: 'all',
+	);
+	const removing = $derived(
+		books.find((book) => book.slug === page.url.searchParams.get('delete')),
+	);
+	const closeDialog = () =>
+		goto(queryUrl(page.url, { dialog: null, delete: null }), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true,
+		});
 	let deleting = $state(false);
 	const filtered = $derived(
 		books.filter(
@@ -55,8 +70,7 @@
 		deleting = true;
 		try {
 			await deleteBook(removing.id);
-			deleteDialog?.close();
-			removing = undefined;
+			await closeDialog();
 		} catch (cause) {
 			error = storageError(cause);
 		} finally {
@@ -74,10 +88,11 @@
 
 <div class="catalog-shell">
 	<header class="site-header">
-		<Brand /><button
+		<Brand /><a
 			class="btn btn-primary"
-			disabled={loading}
-			onclick={() => importDialog?.showModal()}><Plus aria-hidden="true" /> Add a book</button
+			href={queryUrl(page.url, { dialog: 'add', delete: null })}
+			data-sveltekit-noscroll
+			data-sveltekit-keepfocus><Plus aria-hidden="true" /> Add a book</a
 		>
 	</header>
 	<main id="main" class="catalog">
@@ -109,31 +124,50 @@
 		<div class="library-toolbar">
 			<div class="library-filters" aria-label="Filter library">
 				{#each [{ id: 'all', label: 'All books' }, { id: 'reading', label: 'In progress' }, { id: 'finished', label: 'Finished' }] as item (item.id)}
-					<button
+					<a
 						class:active={filter === item.id}
-						aria-pressed={filter === item.id}
-						disabled={loading}
-						onclick={() => (filter = item.id)}>{item.label}</button
+						aria-current={filter === item.id ? 'page' : undefined}
+						href={queryUrl(page.url, { filter: item.id === 'all' ? null : item.id })}
+						data-sveltekit-noscroll
+						data-sveltekit-keepfocus>{item.label}</a
 					>
 				{/each}
 			</div>
-			<label class="search-box"
-				><Search aria-hidden="true" /><input
-					type="search"
-					disabled={loading}
-					aria-label="Search library"
-					placeholder="Find a book"
-					bind:value={query}
-				/></label
+			<form
+				role="search"
+				method="GET"
+				action={resolve('/books')}
+				onsubmit={(event) => event.preventDefault()}
 			>
+				{#if filter !== 'all'}<input type="hidden" name="filter" value={filter} />{/if}
+				<label class="search-box"
+					><Search aria-hidden="true" /><input
+						type="search"
+						name="q"
+						disabled={loading}
+						aria-label="Search library"
+						placeholder="Find a book"
+						value={query}
+						oninput={(event) =>
+							goto(queryUrl(page.url, { q: event.currentTarget.value || null }), {
+								replaceState: true,
+								noScroll: true,
+								keepFocus: true,
+							})}
+					/></label
+				>
+			</form>
 		</div>
 		{#if loading}<p class="empty-message" role="status">Opening your library…</p>
 		{:else if books.length === 0 && !error}
 			<section class="empty-library">
 				<div class="empty-art" aria-hidden="true"><span></span><span></span><span></span></div>
 				<h2>Make room for a good read.</h2>
-				<button class="btn btn-primary" onclick={() => importDialog?.showModal()}
-					><Plus aria-hidden="true" /> Add your first book</button
+				<a
+					class="btn btn-primary"
+					href={queryUrl(page.url, { dialog: 'add', delete: null })}
+					data-sveltekit-noscroll
+					data-sveltekit-keepfocus><Plus aria-hidden="true" /> Add your first book</a
 				>
 			</section>
 		{:else if filtered.length === 0}<p class="empty-message">No books here yet.</p>
@@ -174,8 +208,10 @@
 							class="btn btn-ghost btn-circle delete-book"
 							aria-label={`Delete ${book.title}`}
 							onclick={() => {
-								removing = book;
-								deleteDialog?.showModal();
+								void goto(queryUrl(page.url, { delete: book.slug, dialog: null }), {
+									noScroll: true,
+									keepFocus: true,
+								});
 							}}><Trash /></button
 						>
 					</article>
@@ -184,29 +220,28 @@
 		{/if}
 	</main>
 </div>
-<dialog class="modal" bind:this={importDialog} aria-labelledby="import-title">
-	<div class="modal-box"><Import dialog={importDialog} /></div>
-	<form method="dialog" class="modal-backdrop">
-		<button aria-label="Close import">close</button>
-	</form>
-</dialog>
-<dialog class="modal" bind:this={deleteDialog} aria-labelledby="delete-title">
-	<div class="modal-box delete-dialog">
+<Modal
+	open={page.url.searchParams.get('dialog') === 'add'}
+	labelledby="import-title"
+	close={closeDialog}
+>
+	<Import close={closeDialog} />
+</Modal>
+<Modal open={!!removing} labelledby="delete-title" close={closeDialog}>
+	<div class="delete-dialog">
 		<div class="dialog-heading">
 			<h2 id="delete-title">Remove this book?</h2>
-			<button
-				class="btn btn-ghost btn-circle"
-				aria-label="Cancel deletion"
-				onclick={() => deleteDialog?.close()}><X /></button
+			<button class="btn btn-ghost btn-circle" aria-label="Cancel deletion" onclick={closeDialog}
+				><X /></button
 			>
 		</div>
 		<p>“{removing?.title}” and its reading progress will be removed from this browser.</p>
 		<div class="dialog-actions">
-			<button class="btn btn-ghost" onclick={() => deleteDialog?.close()}>Keep book</button><button
+			<button class="btn btn-ghost" onclick={closeDialog}>Keep book</button><button
 				class="btn btn-error"
 				disabled={deleting}
 				onclick={remove}>Remove book</button
 			>
 		</div>
 	</div>
-</dialog>
+</Modal>

@@ -250,14 +250,14 @@ svg {
 	display: flex;
 	gap: 28px;
 }
-.library-filters button {
+.library-filters a {
 	min-height: 50px;
 	font-size: 13px;
 	color: #a5ac9f;
 	border-bottom: 2px solid transparent;
 	white-space: nowrap;
 }
-.library-filters button.active {
+.library-filters a.active {
 	color: var(--color-primary);
 	border-color: var(--color-primary);
 }

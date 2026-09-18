@@ -5,7 +5,7 @@
 	import X from '~icons/lucide/x';
 	import { importBook, storageError } from '$lib/library';
 
-	let { dialog }: { dialog: HTMLDialogElement | undefined } = $props();
+	let { close }: { close: () => void } = $props();
 	let title = $state('');
 	let text = $state('');
 	let error = $state('');
@@ -39,7 +39,6 @@
 		try {
 			const book = await importBook(title, text);
 			void navigator.storage?.persist?.().catch(() => false);
-			dialog?.close();
 			await goto(resolve('/books/[slug]', { slug: book.slug }));
 		} catch (cause) {
 			error = storageError(cause);
@@ -52,11 +51,8 @@
 <form onsubmit={submit}>
 	<div class="dialog-heading">
 		<h2 id="import-title">A new read.</h2>
-		<button
-			type="button"
-			class="btn btn-ghost btn-circle"
-			aria-label="Close import"
-			onclick={() => dialog?.close()}><X /></button
+		<button type="button" class="btn btn-ghost btn-circle" aria-label="Close import" onclick={close}
+			><X /></button
 		>
 	</div>
 	<label class="upload-zone">

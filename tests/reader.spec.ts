@@ -6,7 +6,7 @@ const chapter =
 
 const addBook = async (page: Page, title = 'A quiet morning', text = chapter) => {
 	await page.goto('/');
-	await page.getByRole('banner').getByRole('button', { name: 'Add a book', exact: true }).click();
+	await page.getByRole('banner').getByRole('link', { name: 'Add a book', exact: true }).click();
 	await page.getByRole('textbox', { name: 'Title', exact: true }).fill(title);
 	await page.getByRole('textbox', { name: 'Text', exact: true }).fill(text);
 	await page.getByRole('button', { name: 'Add to library' }).click();
@@ -57,7 +57,7 @@ test('file import handles duplicate titles and deletion without affecting anothe
 }) => {
 	await addBook(page);
 	await page.goto('/');
-	await page.getByRole('banner').getByRole('button', { name: 'Add a book', exact: true }).click();
+	await page.getByRole('banner').getByRole('link', { name: 'Add a book', exact: true }).click();
 	await page.getByLabel('Upload text file').setInputFiles({
 		name: 'A quiet morning.txt',
 		mimeType: 'text/plain',
@@ -86,7 +86,7 @@ test('plain text and library are accessible on a narrow screen', async ({ page }
 	await expect(
 		new AxeBuilder({ page }).analyze().then((result) => result.violations),
 	).resolves.toEqual([]);
-	await page.getByRole('button', { name: 'Text view' }).click();
+	await page.getByRole('link', { name: 'Text view' }).click();
 	await expect(page.getByRole('article', { name: 'Book text' })).toContainText(
 		'Outside the world carried on.',
 	);
@@ -116,5 +116,78 @@ test('keyboard controls leave input editing alone and a missing book has a way h
 	await page.goto('/books/missing-book');
 	await expect(page.getByRole('heading', { name: 'Book not found.' })).toBeVisible();
 	await page.getByRole('link', { name: 'Back to library' }).click();
-	await expect(page).toHaveURL('/');
+	await expect(page).toHaveURL('/books');
+});
+
+test('library URLs restore filters, search, and dialogs through reload and history', async ({
+	page,
+}) => {
+	await addBook(page);
+	await page.getByRole('button', { name: 'Forward 15 words' }).click();
+	await page.getByRole('link', { name: 'Library', exact: true }).click();
+	await page.getByRole('link', { name: 'In progress', exact: true }).click();
+	await expect(page).toHaveURL('/books?filter=reading');
+	await page.getByRole('searchbox', { name: 'Search library' }).fill('quiet');
+	await expect(page).toHaveURL('/books?filter=reading&q=quiet');
+	await page.reload();
+	await expect(page.getByRole('searchbox')).toHaveValue('quiet');
+	await expect(page.getByRole('link', { name: 'Read A quiet morning', exact: true })).toBeVisible();
+	await page.getByRole('link', { name: 'Finished', exact: true }).click();
+	await expect(page.getByText('No books here yet.')).toBeVisible();
+	await page.goBack();
+	await expect(page.getByRole('link', { name: 'In progress', exact: true })).toHaveAttribute(
+		'aria-current',
+		'page',
+	);
+	await page.getByRole('banner').getByRole('link', { name: 'Add a book' }).click();
+	await expect(page.getByRole('dialog', { name: 'A new read.' })).toBeVisible();
+	await page.goBack();
+	await expect(page.getByRole('dialog')).not.toBeVisible();
+	await page.goForward();
+	await expect(page.getByRole('dialog', { name: 'A new read.' })).toBeVisible();
+	await page.reload();
+	await expect(page.getByRole('dialog', { name: 'A new read.' })).toBeVisible();
+	await page.keyboard.press('Escape');
+	await expect(page).toHaveURL('/books?filter=reading&q=quiet');
+	await page.getByRole('button', { name: 'Delete A quiet morning' }).click();
+	await expect(page).toHaveURL('/books?filter=reading&q=quiet&delete=a-quiet-morning');
+	await page.reload();
+	await expect(page.getByRole('dialog', { name: 'Remove this book?' })).toBeVisible();
+	await page.getByRole('button', { name: 'Keep book' }).click();
+	await expect(page).toHaveURL('/books?filter=reading&q=quiet');
+});
+
+test('reader URLs restore view, position and settings without growing history during playback', async ({
+	page,
+}) => {
+	await addBook(page);
+	await page.goto('/books/a-quiet-morning?view=text&position=12&wpm=500&chunk=2');
+	await expect(page.getByRole('article', { name: 'Book text' })).toBeVisible();
+	await expect(page.getByRole('slider', { name: 'Reading position' })).toHaveValue('12');
+	await page.getByRole('slider').fill('20');
+	await page.reload();
+	await expect(page.getByRole('slider')).toHaveValue('20');
+	await page.getByRole('link', { name: 'Focus view' }).click();
+	await expect(page.getByRole('spinbutton', { name: 'Words per minute' })).toHaveValue('500');
+	await expect(page.getByRole('combobox', { name: 'Words per frame' })).toHaveValue('2');
+	await page.goBack();
+	await expect(page.getByRole('article', { name: 'Book text' })).toBeVisible();
+	await page.goForward();
+	await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled();
+	const historyLength = await page.evaluate(() => history.length);
+	await page.clock.install();
+	await page.getByRole('button', { name: 'Play', exact: true }).click();
+	await page.clock.runFor(800);
+	await page.getByRole('button', { name: 'Pause', exact: true }).click();
+	expect(Number(await page.getByRole('slider').inputValue())).toBeGreaterThan(20);
+	expect(await page.evaluate(() => history.length)).toBe(historyLength);
+	const position = await page.getByRole('slider').inputValue();
+	expect(new URL(page.url()).searchParams.get('position')).toBe(position);
+	await page.reload();
+	await expect(page.getByRole('slider')).toHaveValue(position);
+	await page.goto('/books/a-quiet-morning?view=unknown&position=-1&wpm=Infinity&chunk=4');
+	await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled();
+	await expect(page.getByRole('slider')).toHaveValue(position);
+	await expect(page.getByRole('spinbutton', { name: 'Words per minute' })).toHaveValue('350');
+	await expect(page.getByRole('combobox', { name: 'Words per frame' })).toHaveValue('1');
 });
