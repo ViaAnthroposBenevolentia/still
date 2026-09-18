@@ -23,7 +23,7 @@ Each frame shows up to your selected word count, with a 22-character limit unles
 
 ## Hosting
 
-Connect the repository through a Render Blueprint. `render.yaml` configures a static site with the `/books/*` fallback for local book URLs. The build writes the site to `build/`. Hosting needs no database, secrets, or application server.
+The app is deployed at https://still-eyes.onrender.com as a Render static site, with automatic deploys from `main`. Routing and headers are configured in the Render dashboard; `render.yaml` records the equivalent Blueprint configuration. The `/books/*` fallback supports local book URLs, and the build writes the site to `build/`. Hosting needs no database, secrets, or application server.
 
 ## Limits and storage
 

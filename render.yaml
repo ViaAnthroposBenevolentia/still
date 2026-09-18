@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: still
+    name: still-eyes
     runtime: static
     buildCommand: pnpm install --frozen-lockfile && pnpm build
     staticPublishPath: ./build
