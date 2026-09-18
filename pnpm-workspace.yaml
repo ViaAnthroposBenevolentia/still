@@ -1,0 +1,13 @@
+packages:
+  - .
+strictPeerDependencies: true
+autoInstallPeers: false
+savePrefix: ''
+minimumReleaseAge: 1440
+overrides:
+  # SvelteKit still requests 0.6; 0.7.2 fixes GHSA-pxg6-pf52-xh8x without the v1 API change.
+  '@sveltejs/kit>cookie': 0.7.2
+allowBuilds:
+  '@tailwindcss/oxide': false
+  esbuild: false
+  simple-git-hooks: false

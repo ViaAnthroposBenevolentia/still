@@ -1,0 +1,13 @@
+{
+	"useTabs": true,
+	"singleQuote": true,
+	"ignorePatterns": [
+		"pnpm-lock.yaml",
+		"mise.lock",
+		".svelte-kit/**",
+		"build/**",
+		"playwright-report/**",
+		"test-results/**"
+	],
+	"svelte": true
+}

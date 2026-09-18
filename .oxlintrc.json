@@ -1,0 +1,12 @@
+{
+	"plugins": ["typescript", "unicorn", "oxc"],
+	"categories": { "correctness": "error" },
+	"rules": { "typescript/no-floating-promises": "error" },
+	"ignorePatterns": [
+		".svelte-kit/**",
+		"build/**",
+		"playwright-report/**",
+		"test-results/**",
+		"**/*.svelte"
+	]
+}

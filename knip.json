@@ -1,0 +1,5 @@
+{
+	"$schema": "https://unpkg.com/knip/schema.json",
+	"entry": ["tests/**/*.spec.ts"],
+	"ignoreDependencies": ["@iconify-json/lucide"]
+}

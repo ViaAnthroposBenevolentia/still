@@ -1,0 +1,11 @@
+node_modules/
+.svelte-kit/
+build/
+playwright-report/
+test-results/
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.test
+*.tsbuildinfo

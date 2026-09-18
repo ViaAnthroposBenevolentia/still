@@ -1,0 +1,62 @@
+{
+	"name": "still-reader",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev --host 127.0.0.1",
+		"build": "vite build",
+		"preview": "vite preview --host 127.0.0.1",
+		"prepare": "svelte-kit sync",
+		"format": "oxfmt --check .",
+		"format:fix": "oxfmt --write .",
+		"lint": "oxlint --type-aware --deny-warnings && eslint . --max-warnings 0",
+		"lint:fix": "oxlint --type-aware --fix && eslint . --fix",
+		"fix": "pnpm format:fix && pnpm lint:fix",
+		"typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+		"knip": "knip",
+		"test:unit": "node --test src/lib/reading.test.ts",
+		"test:e2e": "playwright test",
+		"test": "pnpm test:unit && pnpm test:e2e",
+		"check": "pnpm format && pnpm lint && pnpm typecheck && pnpm knip && pnpm test:unit && pnpm build && pnpm test:e2e"
+	},
+	"dependencies": {
+		"dexie": "4.4.6"
+	},
+	"devDependencies": {
+		"@axe-core/playwright": "4.13.0",
+		"@iconify-json/lucide": "1.2.133",
+		"@playwright/test": "1.63.0",
+		"@sveltejs/adapter-static": "3.0.10",
+		"@sveltejs/kit": "2.70.3",
+		"@sveltejs/vite-plugin-svelte": "7.3.0",
+		"@tailwindcss/vite": "4.3.3",
+		"@types/node": "26.6.1",
+		"daisyui": "5.7.40",
+		"eslint": "10.10.0",
+		"eslint-plugin-svelte": "3.23.0",
+		"knip": "6.36.0",
+		"lint-staged": "17.5.1",
+		"oxfmt": "0.68.0",
+		"oxlint": "1.83.0",
+		"oxlint-tsgolint": "7.0.2001",
+		"simple-git-hooks": "2.14.0",
+		"svelte": "5.57.0",
+		"svelte-check": "4.7.6",
+		"tailwindcss": "4.3.3",
+		"typescript": "6.0.3",
+		"typescript-eslint": "8.70.0",
+		"unplugin-icons": "24.0.0",
+		"vite": "8.3.0"
+	},
+	"simple-git-hooks": {
+		"pre-commit": "pnpm exec lint-staged"
+	},
+	"lint-staged": {
+		"*": "oxfmt --check --no-error-on-unmatched-pattern"
+	},
+	"engines": {
+		"node": "26.9.0"
+	},
+	"packageManager": "pnpm@12.4.2"
+}

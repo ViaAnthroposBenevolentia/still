@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: still
+    runtime: static
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    staticPublishPath: ./build
+    routes:
+      - type: rewrite
+        source: /books/*
+        destination: /200.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+    envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: 'true'
+      - key: NODE_VERSION
+        value: 26.9.0
