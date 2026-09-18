@@ -19,10 +19,21 @@
 		error = '';
 		busy = true;
 		try {
-			if (!/\.txt$/iu.test(file.name)) throw new Error('Choose a .txt file.');
-			if (file.size > 5 * 1024 * 1024) throw new Error('Choose a text smaller than 5 MB.');
-			text = await file.text();
-			title ||= file.name.replace(/\.txt$/iu, '').replace(/[_-]/gu, ' ');
+			if (!/\.(?:txt|epub)$/iu.test(file.name)) throw new Error('Choose a .txt or .epub file.');
+			const epub = /\.epub$/iu.test(file.name);
+			const limit = epub ? 20 : 5;
+			if (file.size > limit * 1024 * 1024)
+				throw new Error(`Choose a ${epub ? 'book' : 'text'} smaller than ${limit} MB.`);
+			const source = epub
+				? (await import('$lib/epub')).readEpub(new Uint8Array(await file.arrayBuffer()))
+				: { title: '', text: await file.text() };
+			text = source.text;
+			title ||=
+				source.title.slice(0, 160) ||
+				file.name
+					.replace(/\.(?:txt|epub)$/iu, '')
+					.replace(/[_-]/gu, ' ')
+					.slice(0, 160);
 			filename = file.name;
 		} catch (cause) {
 			error = storageError(cause);
@@ -57,12 +68,12 @@
 	</div>
 	<label class="upload-zone">
 		<Upload aria-hidden="true" />
-		<span>{filename || 'Choose a text file'}</span>
-		<span class="subtle">.txt · up to 5 MB</span>
+		<span>{filename || 'Choose a book file'}</span>
+		<span class="subtle">.txt up to 5 MB · .epub up to 20 MB</span>
 		<input
 			type="file"
-			accept=".txt,text/plain"
-			aria-label="Upload text file"
+			accept=".txt,.epub,text/plain,application/epub+zip"
+			aria-label="Upload book file"
 			onchange={upload}
 			disabled={busy}
 		/>
@@ -71,6 +82,7 @@
 		><span>Title</span><input
 			class="input"
 			bind:value={title}
+			disabled={busy}
 			required
 			maxlength="160"
 			placeholder="Name your book"
@@ -80,6 +92,7 @@
 		><span>Text</span><textarea
 			class="textarea"
 			bind:value={text}
+			disabled={busy}
 			required
 			rows="7"
 			placeholder="Or paste something worth reading…"></textarea></label

@@ -21,7 +21,8 @@
 		"check": "pnpm format && pnpm lint && pnpm typecheck && pnpm knip && pnpm test:unit && pnpm build && pnpm test:e2e"
 	},
 	"dependencies": {
-		"dexie": "4.4.6"
+		"dexie": "4.4.6",
+		"fflate": "0.8.3"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "4.13.0",

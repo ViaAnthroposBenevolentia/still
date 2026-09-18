@@ -1,6 +1,6 @@
 # Still
 
-A local reading library with an RSVP reader that shows a few words at a time. Import a `.txt` file or paste text, then choose your reading speed. App stores your library in IndexedDB in your browser.
+A local reading library with an RSVP reader that shows a few words at a time. Import a `.txt` or `.epub` file or paste text, then choose your reading speed. App stores your library in IndexedDB in your browser.
 
 ## Development
 
@@ -27,7 +27,8 @@ The app is deployed at https://still-eyes.onrender.com as a Render static site, 
 
 ## Limits and storage
 
-- Import UTF-8 plain text files up to 5 MB. Still does not yet support PDF, EPUB, link imports, accounts, sync, or extensions.
+- Import UTF-8 plain text files up to 5 MB or DRM-free EPUB files up to 20 MB (50 MB uncompressed, 5 MB extracted text). EPUB chapters become plain text in reading order, with the book title filled in automatically. Formatting, images, and image-only books are not supported.
+- Still does not yet support PDF, link imports, accounts, sync, or extensions.
 - Your library stays in the browser profile and origin where you imported it. Clearing site data deletes it. Keep your original files because there is no backup or export yet.
 - Still requests persistent browser storage after import, but the browser may decline. Keep the app on the same domain to retain access to your library.
 - Loading the app requires a network connection because there is no service worker.

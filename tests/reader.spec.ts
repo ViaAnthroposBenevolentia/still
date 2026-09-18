@@ -58,7 +58,7 @@ test('file import handles duplicate titles and deletion without affecting anothe
 	await addBook(page);
 	await page.goto('/');
 	await page.getByRole('banner').getByRole('link', { name: 'Add a book', exact: true }).click();
-	await page.getByLabel('Upload text file').setInputFiles({
+	await page.getByLabel('Upload book file').setInputFiles({
 		name: 'A quiet morning.txt',
 		mimeType: 'text/plain',
 		buffer: Buffer.from(chapter),
